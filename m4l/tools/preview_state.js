@@ -4,7 +4,7 @@
 const { makeEngine } = require("../test/gen_translate");
 const SR = 48000, BPM = 124, P = Math.round(SR * 60 / BPM), BAR = 4 * P;
 const e = makeEngine(SR);
-Object.assign(e.G, { tempo: BPM, running: 1, bufbeats: 16, loopbeats: 4, shiftmode: 1, shiftdiv: 5, fadems: 20 });
+Object.assign(e.G, { tempo: BPM, running: 1, bufbeats: 16, loopbeats: 4, shiftmode: 1, shiftdiv: 5, fadems: 20, autostop: 0 });
 function drum(n) {
   const b = n % P, beat = Math.floor(n / P) % 16;
   let s = Math.exp(-b / 2500) * Math.sin(2 * Math.PI * 55 * b / SR) * (beat % 4 == 0 ? 1 : 0.6);

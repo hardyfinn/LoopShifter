@@ -210,10 +210,10 @@ def build():
     P.connect(dm, 0, disp, 0)
 
     # ---- column 1: CAPTURE, Buffer, Loop ----
-    cap = P.add({"maxclass": "live.text", "varname": "Capture", "text": "● CAPTURE", "texton": "● CAPTURE",
+    cap = P.add({"maxclass": "live.text", "varname": "Capture", "text": "ARM", "texton": "ARM",
                  "mode": 0, "numinlets": 1, "numoutlets": 2, "outlettype": ["", ""],
                  "patching_rect": [20, 440, 80, 30], "presentation": 1, "presentation_rect": [272, 4, 78, 34],
-                 "fontsize": 13.0, "activebgcolor": [0.82, 0.23, 0.23, 1.0],
+                 "fontsize": 13.0, "activebgcolor": [0.35, 0.35, 0.35, 1.0],
                  "activebgoncolor": [1.0, 0.45, 0.45, 1.0], "activetextcolor": [1.0, 1.0, 1.0, 1.0],
                  "activetextoncolor": [1.0, 1.0, 1.0, 1.0], "parameter_enable": 1,
                  "saved_attribute_attributes": valueof("Capture", "Capture", 2, {
@@ -237,7 +237,9 @@ def build():
                       "parameter_mmin": 1, "parameter_mmax": 16, "parameter_initial_enable": 1,
                       "parameter_initial": [4], "parameter_unitstyle": 9, "parameter_units": "%d beats"})})
     send(P, loop, "loopbeats", 340, 510, gen)
-    label(P, "drag or type", [272, 124, 78, 14], size=10.0)
+    auto = toggle(P, "Auto Stop", "AutoStop", "auto stop", 340, 560, [272, 130, 78, 20], dflt=1)
+    P.boxes[-1]["box"]["fontsize"] = 11.0
+    send(P, auto, "autostop", 340, 600, gen)
 
     # ---- column 2: Shift ----
     label(P, "Shift", [356, 4, 104, 16])
@@ -285,8 +287,76 @@ def build():
                  "fontsize": 12.0, "parameter_enable": 1,
                  "saved_attribute_attributes": valueof("Restart", "Restart", 2, {
                      "parameter_enum": ["off", "on"], "parameter_mmax": 1})})
-    label(P, "on the next bar", [466, 130, 82, 14], size=10.0)
     seqs.append((rst, 1120, "rstseq"))
+    clr = P.add({"maxclass": "live.text", "varname": "Clear", "text": "clear", "texton": "clear",
+                 "mode": 0, "numinlets": 1, "numoutlets": 2, "outlettype": ["", ""],
+                 "patching_rect": [1220, 440, 80, 20], "presentation": 1, "presentation_rect": [466, 132, 82, 22],
+                 "fontsize": 12.0, "parameter_enable": 1,
+                 "saved_attribute_attributes": valueof("Clear", "Clear", 2, {
+                     "parameter_enum": ["off", "on"], "parameter_mmax": 1})})
+    seqs.append((clr, 1220, "clrseq"))
+
+    # ---- talking to Live: stop the transport and switch the clip off when the buffer is full ----
+    live = P.obj("js loopshifter_live.js", 1220, 900, 1, 1, w=160)
+    P.connect(auto, 0, P.obj("prepend auto", 340, 640), 0)
+    P.connect(P.boxes[-1]["box"]["id"], 0, live, 0)
+    crt = P.obj("route bang 1", 1220, 820, 1, 3)
+    P.connect(clr, 0, crt, 0)
+    mclr = P.msg("clear", 1220, 860)
+    P.connect(crt, 0, mclr, 0)
+    P.connect(crt, 1, mclr, 0)
+    P.connect(mclr, 0, live, 0)
+
+    # ---- the ARM button shows the state: ARM, ARMED, flashing REC, COMPLETE ----
+    poll = P.obj("qmetro 50 @active 1", 20, 820, 2, 1, ["bang"])
+    pt = P.obj("t b b", 20, 850, 1, 2, ["bang", "bang"])
+    P.connect(poll, 0, pt, 0)
+    i0 = P.msg("0", 20, 880)
+    i18 = P.msg("18", 120, 880)
+    P.connect(pt, 1, i0, 0)
+    P.connect(pt, 0, i18, 0)
+    pk0 = P.obj("peek~ ---lsst", 20, 910, 3, 1, ["float"])
+    pk18 = P.obj("peek~ ---lsst", 120, 910, 3, 1, ["float"])
+    P.connect(i0, 0, pk0, 0)
+    P.connect(i18, 0, pk18, 0)
+    toint = P.obj("i", 20, 935, 2, 1, ["int"])
+    P.connect(pk0, 0, toint, 0)
+    sch = P.obj("change -1", 20, 960, 1, 3, ["", "int", "int"])
+    P.connect(toint, 0, sch, 0)
+    ssel = P.obj("sel 0 1 2", 20, 970, 1, 4)
+    P.connect(sch, 0, ssel, 0)
+    looks = ["text ARM, texton ARM, activebgcolor 0.35 0.35 0.35 1, activetextcolor 0.93 0.93 0.93 1",
+             "text ARMED, texton ARMED, activebgcolor 0.94 0.63 0.13 1, activetextcolor 0.12 0.12 0.12 1",
+             "text ● REC, texton ● REC, activetextcolor 1 1 1 1",
+             "text COMPLETE, texton COMPLETE, activebgcolor 0.2 0.55 0.3 1, activetextcolor 1 1 1 1"]
+    flash = P.obj("qmetro 250", 500, 1060, 2, 1, ["bang"])
+    fon, foff = P.msg("1", 440, 1030), P.msg("0", 480, 1030)
+    P.connect(fon, 0, flash, 0)
+    P.connect(foff, 0, flash, 0)
+    for i, lk in enumerate(looks):
+        m = P.msg(lk, 20, 1000 + 30 * i)
+        P.connect(ssel, i, m, 0)
+        P.connect(m, 0, cap, 0)
+        P.connect(ssel, i, fon if i == 2 else foff, 0)
+    mrec = P.msg("recstart", 700, 1000)
+    P.connect(ssel, 2, mrec, 0)
+    P.connect(mrec, 0, live, 0)
+    fc = P.obj("counter 0 1", 500, 1090, 3, 4, ["int", "", "", "int"])
+    P.connect(flash, 0, fc, 0)
+    fsel = P.obj("sel 0 1", 500, 1120, 1, 3)
+    P.connect(fc, 0, fsel, 0)
+    f1 = P.msg("activebgcolor 0.9 0.15 0.15 1", 500, 1150)
+    f2 = P.msg("activebgcolor 0.4 0.08 0.08 1", 700, 1150)
+    P.connect(fsel, 0, f1, 0)
+    P.connect(fsel, 1, f2, 0)
+    P.connect(f1, 0, cap, 0)
+    P.connect(f2, 0, cap, 0)
+    # the buffer is full: tell the js (it stops Live and switches the clip off if AUTO STOP is on)
+    dch = P.obj("change 0.", 120, 940, 1, 3, ["", "int", "int"])
+    P.connect(pk18, 0, dch, 0)
+    mdone = P.msg("done", 120, 970)
+    P.connect(dch, 0, mdone, 0)
+    P.connect(mdone, 0, live, 0)
 
     # buttons -> counter -> "<name> n" (gen~ sees a new number each press)
     for (bid, x, name) in seqs:
@@ -300,7 +370,7 @@ def build():
         P.connect(pre, 0, gen, 0)
 
     # on load: every control sends its value again (and sets ms/beat visibility)
-    for c in [buf, loop, smode, sdiv, sms, sdir, fade, endt]:
+    for c in [buf, loop, smode, sdiv, sms, sdir, fade, endt, auto]:
         P.connect(tb, 0, c, 0)
 
     longs_all = [b["box"]["saved_attribute_attributes"]["valueof"]["parameter_longname"]
@@ -310,13 +380,16 @@ def build():
     return patcher_dict(P.boxes, P.lines, [60.0, 80.0, 1300.0, 820.0],
                         extra={"devicewidth": 552.0,
                                "dependency_cache": [{"name": "loopshifter_display.js", "bootpath": ".",
+                                                     "patcherrelativepath": ".", "type": "TEXT", "implicit": 1},
+                                                    {"name": "loopshifter_live.js", "bootpath": ".",
                                                      "patcherrelativepath": ".", "type": "TEXT", "implicit": 1}],
                                "project": {
                                    "version": 1, "creationdate": 3814000000, "modificationdate": 3814000000,
                                    "viewrect": [0.0, 0.0, 300.0, 500.0], "autoorganize": 1, "hideprojectwindow": 1,
                                    "showdependencies": 1, "autolocalize": 0,
                                    "contents": {"patchers": {},
-                                                "code": {"loopshifter_display.js": {"kind": "javascript", "local": 1}}},
+                                                "code": {"loopshifter_display.js": {"kind": "javascript", "local": 1},
+                                                         "loopshifter_live.js": {"kind": "javascript", "local": 1}}},
                                    "layout": {}, "searchpath": {}, "detailsvisible": 0,
                                    "amxdtype": 1633771873,          # 'aaaa': an audio effect
                                    "readonly": 0, "devpathtype": 0, "devpath": ".", "sortmode": 0,
@@ -340,8 +413,9 @@ def main():
         f.write(amxd_bytes(patcher))
     with open(os.path.join(OUT, "Loopshifter.maxpat"), "w") as f:
         json.dump({"patcher": patcher}, f, indent=1, ensure_ascii=False)
-    with open(os.path.join(OUT, "loopshifter_display.js"), "w") as f:
-        f.write(open(os.path.join(HERE, "loopshifter_display.js")).read())
+    for js in ["loopshifter_display.js", "loopshifter_live.js"]:
+        with open(os.path.join(OUT, js), "w") as f:
+            f.write(open(os.path.join(HERE, js)).read())
     print("built m4l/dist/Loopshifter.amxd")
 
 

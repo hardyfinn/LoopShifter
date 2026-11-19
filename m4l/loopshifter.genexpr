@@ -54,6 +54,8 @@ Param tempo(120, min=20, max=999);     // Live's tempo
 Param running(0, min=0, max=1);        // Live's transport is playing
 Param capseq(0);                       // changes each time CAPTURE is pressed
 Param rstseq(0);                       // changes each time RESTART is pressed
+Param clrseq(0);                       // changes each time CLEAR is pressed
+Param autostop(1, min=0, max=1);       // 1 = when the buffer is full, Live stops (the patch does that) and the loop waits for Play
 
 Data bufL(4194304);
 Data bufR(4194304);
@@ -86,6 +88,9 @@ History h_gonext(0);
 History h_still(0);
 History h_since(1000000);
 History h_cph(0);
+History h_pclr(0);
+History h_done(0);
+History h_waitstop(0);
 
 // ---------------------------------------------------------------------------
 PKN = 512;
@@ -119,6 +124,8 @@ tstart = 0;
 stopped = 0;
 cph = 0;
 crossed = 0;
+done = h_done;
+waitstop = h_waitstop;
 begin = 0;
 gonext = 0;
 wasPlaying = 0;
@@ -186,8 +193,28 @@ if (tstart > 0.5) {
 }
 
 // ---- buttons ----
+// ARM: empty -> armed; armed or recording -> cancel (back to empty); full -> nothing (press Clear first)
 if (capseq != h_pcap) {
-	state = 1;
+	if (state < 0.5) {
+		state = 1;
+	} else if (state < 1.5) {
+		state = 0;
+	} else if (state < 2.5) {
+		state = 0;
+		len = 0;
+	}
+}
+// CLEAR: forget the buffer
+if (clrseq != h_pclr) {
+	waitstop = 0;
+	state = 0;
+	len = 0;
+	wpos = 0;
+	pass = 0;
+	rstpend = 0;
+	for (k = 0; k < PKN; k += 1) {
+		poke(pk, 0, k, 0);
+	}
 }
 if (rstseq != h_prst && state >= 3) {
 	rstpend = 1;
@@ -195,6 +222,7 @@ if (rstseq != h_prst && state >= 3) {
 
 // ---- Live stopped: keep the buffer, start again from the top on the next play ----
 if (stopped) {
+	waitstop = 0;
 	if (state == 2) {
 		state = 1;
 	} else if (state >= 4) {
@@ -222,13 +250,18 @@ if (state == 2) {
 	poke(pk, max(peek(pk, b, 0), mono), b, 0);
 	wpos = wpos + 1;
 	if (wpos >= len) {
-		state = 3;          // the recording ends on the capture point: play from the next sample
-		gonext = 1;
+		state = 3;          // the recording ends on the capture point
+		done = done + 1;    // tells the patch the buffer is full (it stops Live and switches the clip off)
+		if (autostop < 0.5) {
+			gonext = 1;     // no auto stop: play from the next sample
+		} else {
+			waitstop = 1;   // auto stop: wait until Live has stopped, then start on the next Play
+		}
 	}
 }
 
 // ---- ready / restart: begin when Live passes the capture point ----
-if (state == 3 && (crossed > 0.5 || h_gonext > 0.5)) {
+if (state == 3 && ((crossed > 0.5 && waitstop < 0.5) || h_gonext > 0.5)) {
 	begin = 1;
 }
 if (rstpend > 0.5 && state >= 4 && crossed > 0.5) {
@@ -359,6 +392,7 @@ if (h_tick <= 0) {
 	poke(st, gain, 15, 0);
 	poke(st, shiftmode, 16, 0);
 	poke(st, stopped, 17, 0);
+	poke(st, done, 18, 0);
 	h_tick = floor(sr / 200);
 } else {
 	h_tick = h_tick - 1;
@@ -390,3 +424,6 @@ h_gonext = gonext;
 h_still = still;
 h_since = since;
 h_cph = cph;
+h_pclr = clrseq;
+h_done = done;
+h_waitstop = waitstop;

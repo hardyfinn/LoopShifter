@@ -13,7 +13,7 @@ class Run {
   constructor(opts) {
     this.e = makeEngine(SR);
     this.G = this.e.G;
-    Object.assign(this.G, { tempo: 120, running: 1, fadems: 0 }, opts || {});
+    Object.assign(this.G, { tempo: 120, running: 1, fadems: 0, autostop: 0 }, opts || {});
     this.n = 0;
     this.out = [0, 0, 0];
   }
@@ -147,7 +147,7 @@ function onBeat(heard) {
 //     even in the middle of a bar, and the loop then keeps that place in the bar
 {
   const e = makeEngine(SR);
-  Object.assign(e.G, { tempo: 120, running: 0, fadems: 0, bufbeats: 8, loopbeats: 4, shiftmode: 1, shiftdiv: 5 });
+  Object.assign(e.G, { tempo: 120, running: 0, fadems: 0, autostop: 0, bufbeats: 8, loopbeats: 4, shiftmode: 1, shiftdiv: 5 });
   const T0 = 3000, OFF = 700;                     // Live starts 700 samples into a bar
   const phase = (n) => n < T0 ? OFF / BAR : ((n - T0 + OFF) % BAR) / BAR;
   let out = [0, 0, 0];
@@ -167,6 +167,40 @@ function onBeat(heard) {
   const next = recStart + 8 * P + BAR;           // a whole bar after the end of the buffer
   for (; n < next + 5; n++) stepAt(n);
   check(Math.round(out[0] * 1e6) - 1 - recStart === 4, "restart lines up with the capture point");
+}
+
+// 11. ARM again cancels; when full, ARM does nothing; CLEAR empties the buffer
+{
+  const r = new Run({ bufbeats: 8 });
+  r.stepTo(100); r.capture(); r.stepTo(200);
+  check(r.G.h_state === 1, "ARM arms");
+  r.capture(); r.stepTo(300);
+  check(r.G.h_state === 0, "ARM again while armed cancels");
+  r.capture(); r.stepTo(2500);
+  check(r.G.h_state === 2, "recording");
+  r.capture(); r.stepTo(2600);
+  check(r.G.h_state === 0 && r.G.h_len === 0, "ARM while recording cancels");
+  r.capture(); r.stepTo(4000 + 8 * P + 10);
+  check(r.G.h_state === 4, "records again and plays");
+  r.capture(); r.stepTo(r.n + 10);
+  check(r.G.h_state === 4, "ARM does nothing once the buffer is full");
+  r.G.clrseq += 1; r.stepTo(r.n + 10);
+  check(r.G.h_state === 0 && r.G.h_len === 0 && !r.out[2], "CLEAR empties the buffer");
+  check(Math.round(r.out[0] * 1e6) - 1 === r.n - 1, "dry signal after CLEAR");
+}
+
+// 12. auto stop: when the buffer is full it signals "done" and waits instead of playing
+{
+  const r = new Run({ bufbeats: 8, autostop: 1 });
+  r.stepTo(100); r.capture(); r.stepTo(2000 + 8 * P + BAR + 10);   // even past the next bar line
+  check(r.G.h_state === 3 && r.G.h_done === 1 && !r.out[2], "auto stop: buffer full, done = 1, not playing");
+  // the patch now stops Live: the phasor stands still, then Live plays again from the bar line
+  for (let i = 0; i < 2000; i++) { const s = 0; r.e.perform(s, s, 0, 0.0); }
+  r.G.running = 0; for (let i = 0; i < 200; i++) r.e.perform(0, 0, 0, 0.0);
+  r.G.running = 1;
+  let o = null;
+  for (let i = 0; i < 10; i++) o = r.e.perform(0, 0, 0, i / BAR);
+  check(o[2] && r.G.h_pos >= 9 && r.G.h_pos <= 10, "plays from the top when Live plays again (" + r.G.h_pos + ")");
 }
 
 console.log(failures ? failures + " FAILED" : "all passed");

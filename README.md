@@ -28,34 +28,45 @@ Because it plays loop minus shift, the shift has to be shorter than the loop.
 
 ## Install
 
-Put **Loopshifter.amxd** and **loopshifter_display.js** in the same folder (for example
+Put **Loopshifter.amxd**, **loopshifter_display.js** and **loopshifter_live.js** in the same folder (for example
 `User Library/Presets/Audio Effects/Max Audio Effect/`) and drag Loopshifter.amxd onto an
-audio track, a group or a return. `loopshifter_display.js` draws the display. To get one
+audio track, a group or a return. `loopshifter_display.js` draws the display and `loopshifter_live.js` stops Live and
+switches the clip off. To get one
 file that carries everything, open the device in Max and press **Freeze Device**.
 
 ## Playing it
 
-1. With Live stopped, press **CAPTURE**. The display says *ARMED: starts with Play*.
-2. Press Play in Live. Recording starts on the very first sample, wherever you start
-   from (the display counts the beats in red), and the loop starts as soon as the buffer
-   is full.
-   If you press **CAPTURE** while Live is already playing, it waits for the next bar line
-   instead.
-3. Change **Loop**, **Shift** and the direction while it plays. Each change takes effect at
-   the next jump.
-4. **Restart** goes back to the first window on the next bar line.
-5. Press **CAPTURE** again to record a new buffer. You hear the track while it records.
+Put Loopshifter on the track that holds the clip you want to loop.
 
-Before a capture, and after a **stop**, you hear the track as normal. When Live stops,
-the buffer is kept, and the next time Live plays, the loop starts again from the top. If
-you start from the same place you captured from (usually a bar line), it starts straight
-away.
+1. With Live stopped, press **ARM**. The button says **ARMED**.
+2. Press Play in Live. Recording starts on the very first sample, wherever you start
+   from. The button flashes **REC** and the display counts the beats in red.
+3. When the buffer is full, the button says **COMPLETE**. With **auto stop** on (the
+   default), Loopshifter stops Live and switches off the clip that was playing into it
+   (the clip on this track: the playing Session clip, or the Arrangement clip under the part
+   it recorded).
+4. Press Play again. The loop plays in place of the clip.
+5. Change **Loop**, **Shift** and the direction while it plays. Each change takes effect at
+   the next jump. **Restart** goes back to the first window on the next bar line.
+6. **Clear** empties the buffer, switches the clip back on, and turns the button back into
+   **ARM**, ready for a new capture.
+
+Pressing **ARMED** or **REC** cancels, back to **ARM**. Pressing **COMPLETE** does nothing:
+press **Clear** first. If you press **ARM** while Live is already playing, recording waits
+for the next bar line. With **auto stop** off, Live keeps playing and the loop starts as
+soon as the buffer is full.
+
+Before a capture, and after **At end: stop**, you hear the track as normal. When Live
+stops, the buffer is kept, and the next time Live plays, the loop starts again from the
+top.
 
 ## Controls
 
 | Control | What it does |
 |---|---|
-| **CAPTURE** | Arms the capture. Live stopped: recording starts when you press Play. Live playing: it starts on the next bar line. Records 8, 16 or 32 beats. |
+| **ARM / ARMED / REC / COMPLETE** | Arms the capture and shows where it's at. Live stopped: recording starts when you press Play. Live playing: it starts on the next bar line. Press again while ARMED or REC to cancel. |
+| **auto stop** | On: when the buffer is full, Live stops and the clip on this track is switched off, so the loop takes over at the next Play. Off: Live keeps going and the loop starts straight away. |
+| **Clear** | Empties the buffer and switches back on any clip that auto stop switched off. |
 | **Buffer** | How many beats to capture: 8, 16 or 32. |
 | **Loop** | Loop length, from 1 to 16 beats. |
 | **Shift: ms / beat** | Set the shift in milliseconds (a knob, 1 to 2000 ms) or as a fraction of a beat. |
@@ -98,5 +109,6 @@ the **Shift** fraction across a breakdown.
 - `m4l/build_device.py`: writes `m4l/dist/Loopshifter.amxd` (and a `.maxpat` copy to read in Max)
 - `m4l/test/gen_test.js`: turns the GenExpr into JavaScript and checks the playback order
   (ABCDE BCDEF..., ms shifts, backwards, wrap, stop, restart, transport, fades,
-  arming while Live is stopped):
+  arming while Live is stopped, ARM/cancel, Clear, auto stop):
   `node m4l/test/gen_test.js`
+- `m4l/loopshifter_live.js`: stops Live and switches the clip off and on again ([js], Live API)

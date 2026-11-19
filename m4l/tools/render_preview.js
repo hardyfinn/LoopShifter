@@ -18,12 +18,12 @@ body{margin:0;background:#3a3a3a;font-family:Arial,Helvetica,sans-serif}
 .btn{background:#595959;color:#ddd;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center}
 </style></head><body><div class="dev">
 <canvas id="c" class="a" style="left:4px;top:4px;width:262px;height:161px" width="524" height="322"></canvas>
-<div class="a btn" style="left:272px;top:4px;width:78px;height:34px;background:#d23b3b;color:#fff;font-size:13px">&#9679; CAPTURE</div>
+<div class="a btn" style="left:272px;top:4px;width:78px;height:34px;background:#338c4d;color:#fff;font-size:13px">COMPLETE</div>
 <div class="a lbl" style="left:272px;top:42px;width:78px">Buffer</div>
 <div class="a tab" style="left:272px;top:58px;width:78px;height:20px"><div>8</div><div class="on">16</div><div>32</div></div>
 <div class="a lbl" style="left:272px;top:82px;width:78px">Loop</div>
 <div class="a btn" style="left:272px;top:98px;width:78px;height:24px;background:#2a2a2a;color:#f0a020;font-size:13px">4 beats</div>
-<div class="a sm" style="left:272px;top:125px;width:78px">drag or type</div>
+<div class="a btn" style="left:272px;top:130px;width:78px;height:20px;background:#f0a020;color:#1e1e1e;font-size:11px">auto stop</div>
 <div class="a lbl" style="left:356px;top:4px;width:104px">Shift</div>
 <div class="a tab" style="left:356px;top:20px;width:104px;height:20px"><div>ms</div><div class="on">beat</div></div>
 <div class="a tab" style="left:356px;top:44px;width:104px;height:44px"><div>1/32</div><div>1/16</div><div>1/8</div><div>1/4</div><div>1/2</div><div class="on">1</div></div>
@@ -35,7 +35,7 @@ body{margin:0;background:#3a3a3a;font-family:Arial,Helvetica,sans-serif}
 <div class="a lbl" style="left:466px;top:58px;width:82px">At end</div>
 <div class="a tab" style="left:466px;top:74px;width:82px;height:22px"><div class="on">wrap</div><div>stop</div></div>
 <div class="a btn" style="left:466px;top:102px;width:82px;height:26px">&#10226; restart</div>
-<div class="a sm" style="left:466px;top:131px;width:82px">on the next bar</div>
+<div class="a btn" style="left:466px;top:132px;width:82px;height:22px">clear</div>
 </div><script>
 const S = ${state};
 const cv = document.getElementById("c"), cx = cv.getContext("2d"); cx.scale(2, 2);
