@@ -35,23 +35,27 @@ file that carries everything, open the device in Max and press **Freeze Device**
 
 ## Playing it
 
-1. Start Live playing, with sound coming into the track.
-2. Press **CAPTURE**. It waits for the next bar line, records the buffer (the display
-   counts the beats in red), and starts looping as soon as the buffer is full.
+1. With Live stopped, press **CAPTURE**. The display says *ARMED: starts with Play*.
+2. Press Play in Live. Recording starts on the very first sample, wherever you start
+   from (the display counts the beats in red), and the loop starts as soon as the buffer
+   is full.
+   If you press **CAPTURE** while Live is already playing, it waits for the next bar line
+   instead.
 3. Change **Loop**, **Shift** and the direction while it plays. Each change takes effect at
    the next jump.
 4. **Restart** goes back to the first window on the next bar line.
 5. Press **CAPTURE** again to record a new buffer. You hear the track while it records.
 
 Before a capture, and after a **stop**, you hear the track as normal. When Live stops,
-the buffer is kept, and the next time Live plays, the loop starts again from the top on
-the first bar line.
+the buffer is kept, and the next time Live plays, the loop starts again from the top. If
+you start from the same place you captured from (usually a bar line), it starts straight
+away.
 
 ## Controls
 
 | Control | What it does |
 |---|---|
-| **CAPTURE** | Records the next 8, 16 or 32 beats, starting on the next bar line. |
+| **CAPTURE** | Arms the capture. Live stopped: recording starts when you press Play. Live playing: it starts on the next bar line. Records 8, 16 or 32 beats. |
 | **Buffer** | How many beats to capture: 8, 16 or 32. |
 | **Loop** | Loop length, from 1 to 16 beats. |
 | **Shift: ms / beat** | Set the shift in milliseconds (a knob, 1 to 2000 ms) or as a fraction of a beat. |
@@ -80,7 +84,8 @@ the **Shift** fraction across a breakdown.
 
 ## Notes
 
-- Assumes 4/4. Capture and Restart wait for bar lines from Live's transport.
+- Assumes 4/4. The loop remembers where in the bar the capture started (normally the bar
+  line), and Restart waits for that point, so the loop stays lined up with the bars.
 - The buffer remembers the tempo it was captured at. If you change Live's tempo after
   capturing, capture again.
 - The window, the play head and the beat it's on are shown in the display. The status
@@ -92,5 +97,6 @@ the **Shift** fraction across a breakdown.
 - `m4l/loopshifter_display.js`: the display ([jsui])
 - `m4l/build_device.py`: writes `m4l/dist/Loopshifter.amxd` (and a `.maxpat` copy to read in Max)
 - `m4l/test/gen_test.js`: turns the GenExpr into JavaScript and checks the playback order
-  (ABCDE BCDEF..., ms shifts, backwards, wrap, stop, restart, transport, fades):
+  (ABCDE BCDEF..., ms shifts, backwards, wrap, stop, restart, transport, fades,
+  arming while Live is stopped):
   `node m4l/test/gen_test.js`

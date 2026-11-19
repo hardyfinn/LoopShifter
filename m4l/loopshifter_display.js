@@ -74,10 +74,10 @@ function paint() {
 	mgraphics.rectangle(0, 0, W, H);
 	mgraphics.fill();
 	var s = null;
-	if (st) s = st.peek(1, 0, 17);
+	if (st) s = st.peek(1, 0, 18);
 	if (!s || !s.length || s[6] <= 0) {
 		text("LOOPSHIFTER", 8, H / 2, 15, C_ORANGE);
-		text("press CAPTURE with Live playing", 8, H / 2 + 18, 11, C_SOFT);
+		text("press CAPTURE to arm", 8, H / 2 + 18, 11, C_SOFT);
 		return;
 	}
 	var state = s[0], len = s[1], start = s[2], win = s[3], pos = s[4], pass = s[5], sr = s[6];
@@ -87,9 +87,9 @@ function paint() {
 	// ---- status line ----
 	var left = "", lc = C_ORANGE;
 	if (state == 0) { left = "EMPTY: press CAPTURE"; lc = C_SOFT; }
-	else if (state == 1) { left = "CAPTURE: next bar"; lc = C_REC; }
+	else if (state == 1) { left = s[17] > 0.5 ? "ARMED: starts with Play" : "CAPTURE: next bar"; lc = C_REC; }
 	else if (state == 2) { left = "RECORDING " + Math.floor(wpos / cper + 1) + " / " + Math.round(len / cper); lc = C_REC; }
-	else if (state == 3) { left = "READY: next bar"; lc = C_INK; }
+	else if (state == 3) { left = s[17] > 0.5 ? "READY: press Play" : "READY: next bar"; lc = C_INK; }
 	else if (state == 5) { left = "END: stopped"; lc = C_SOFT; }
 	else {
 		var a = start / cper, b = (start + win) / cper, n = len / cper;

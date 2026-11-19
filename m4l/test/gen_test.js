@@ -143,5 +143,31 @@ function onBeat(heard) {
   check(worst < 0.2, "20 ms fade: no clicks (largest step " + worst.toFixed(4) + ")");
 }
 
+// 10. armed while Live is stopped: recording starts on the first sample Live plays,
+//     even in the middle of a bar, and the loop then keeps that place in the bar
+{
+  const e = makeEngine(SR);
+  Object.assign(e.G, { tempo: 120, running: 0, fadems: 0, bufbeats: 8, loopbeats: 4, shiftmode: 1, shiftdiv: 5 });
+  const T0 = 3000, OFF = 700;                     // Live starts 700 samples into a bar
+  const phase = (n) => n < T0 ? OFF / BAR : ((n - T0 + OFF) % BAR) / BAR;
+  let out = [0, 0, 0];
+  const stepAt = (n) => { const s = (n + 1) * 1e-6; out = e.perform(s, s, 0, phase(n)); };
+  let n = 0;
+  for (; n < 200; n++) stepAt(n);
+  e.G.capseq = 1;                                 // arm while stopped
+  for (; n < T0; n++) stepAt(n);
+  check(e.G.h_state === 1, "armed and waiting while Live is stopped");
+  for (; n < T0 + 20; n++) { if (n === T0 + 15) e.G.running = 1; stepAt(n); }   // the transport message comes late
+  check(e.G.h_state === 2 && e.G.h_wpos === 20 - 1, "recording started with Live's first moving sample (" + e.G.h_wpos + ")");
+  const recStart = T0 + 1;                         // the phasor first moves on the sample after T0
+  for (; n < recStart + 8 * P + 3; n++) stepAt(n);
+  check(out[2] && Math.round(out[0] * 1e6) - 1 - recStart === 2, "plays the buffer straight after recording");
+  // restart: begins again when Live passes the capture point, not the bar line
+  e.G.rstseq = 1;
+  const next = recStart + 8 * P + BAR;           // a whole bar after the end of the buffer
+  for (; n < next + 5; n++) stepAt(n);
+  check(Math.round(out[0] * 1e6) - 1 - recStart === 4, "restart lines up with the capture point");
+}
+
 console.log(failures ? failures + " FAILED" : "all passed");
 process.exit(failures ? 1 : 0);

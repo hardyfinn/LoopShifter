@@ -83,6 +83,9 @@ History h_pph(0);
 History h_prun(0);
 History h_tick(0);
 History h_gonext(0);
+History h_still(0);
+History h_since(1000000);
+History h_cph(0);
 
 // ---------------------------------------------------------------------------
 PKN = 512;
@@ -109,6 +112,13 @@ pass = h_pass;
 ph = in4;
 period = sr * 60 / tempo;
 barStart = 0;
+moving = 0;
+still = 0;
+since = 0;
+tstart = 0;
+stopped = 0;
+cph = 0;
+crossed = 0;
 begin = 0;
 gonext = 0;
 wasPlaying = 0;
@@ -128,8 +138,51 @@ ramp = 0;
 target = 0;
 size = dim(bufL);
 
-if (running > 0.5 && (ph < h_pph - 0.5 || (h_prun < 0.5 && ph < 0.05))) {
+// ---- Live's transport, read from the bar phasor ----
+// The phasor stands still while Live is stopped, so the first sample it moves
+// is the moment Live starts: an armed capture starts recording right there.
+// (The "running" message from [transport] is a backup, it arrives up to 20 ms late.)
+moving = abs(ph - h_pph) > 0.0000001;
+still = h_still;
+since = h_since;
+tstart = 0;
+if (moving) {
+	if (still >= 0.01 * sr) {
+		tstart = 1;
+		since = 0;
+	}
+	still = 0;
+} else {
+	still = min(still + 1, sr);
+}
+if (running > 0.5 && h_prun < 0.5 && since > 0.1 * sr) {
+	tstart = 1;
+	since = 0;
+}
+since = min(since + 1, sr);
+stopped = still >= 0.05 * sr || (running < 0.5 && since > 0.1 * sr);
+
+// a bar line while Live plays
+if (moving && ph < h_pph - 0.5) {
 	barStart = 1;
+}
+
+// the capture point: the place in the bar where the buffer starts (0 = on the bar line).
+// Ready and Restart begin when Live passes it, so the loop lines up with the bar as it was captured.
+cph = h_cph;
+crossed = 0;
+if (moving) {
+	if (ph >= h_pph) {
+		crossed = h_pph < cph && ph >= cph;
+	} else {
+		crossed = cph > h_pph || cph <= ph;
+	}
+}
+if (tstart > 0.5) {
+	x = abs(ph - cph);
+	if (min(x, 1 - x) < 0.01) {
+		crossed = 1;
+	}
 }
 
 // ---- buttons ----
@@ -141,7 +194,7 @@ if (rstseq != h_prst && state >= 3) {
 }
 
 // ---- Live stopped: keep the buffer, start again from the top on the next play ----
-if (running < 0.5) {
+if (stopped) {
 	if (state == 2) {
 		state = 1;
 	} else if (state >= 4) {
@@ -149,9 +202,11 @@ if (running < 0.5) {
 	}
 }
 
-// ---- capture: wait for a bar line, then record ----
-if (state == 1 && barStart > 0.5) {
+// ---- capture: armed while Live is stopped -> starts with Live's Play;
+//      pressed while Live plays -> waits for the next bar line ----
+if (state == 1 && (tstart > 0.5 || barStart > 0.5)) {
 	state = 2;
+	cph = ph;
 	wpos = 0;
 	cper = floor(period + 0.5);
 	len = min(floor(bufbeats + 0.5) * cper, size);
@@ -167,16 +222,16 @@ if (state == 2) {
 	poke(pk, max(peek(pk, b, 0), mono), b, 0);
 	wpos = wpos + 1;
 	if (wpos >= len) {
-		state = 3;          // the recording ends on a bar line: play from the next sample
+		state = 3;          // the recording ends on the capture point: play from the next sample
 		gonext = 1;
 	}
 }
 
-// ---- ready / restart: begin on the next bar line ----
-if (state == 3 && (barStart > 0.5 || h_gonext > 0.5)) {
+// ---- ready / restart: begin when Live passes the capture point ----
+if (state == 3 && (crossed > 0.5 || h_gonext > 0.5)) {
 	begin = 1;
 }
-if (rstpend > 0.5 && state >= 4 && barStart > 0.5) {
+if (rstpend > 0.5 && state >= 4 && crossed > 0.5) {
 	begin = 1;
 }
 
@@ -303,6 +358,7 @@ if (h_tick <= 0) {
 	poke(st, rstpend, 14, 0);
 	poke(st, gain, 15, 0);
 	poke(st, shiftmode, 16, 0);
+	poke(st, stopped, 17, 0);
 	h_tick = floor(sr / 200);
 } else {
 	h_tick = h_tick - 1;
@@ -331,3 +387,6 @@ h_pass = pass;
 h_pph = ph;
 h_prun = running;
 h_gonext = gonext;
+h_still = still;
+h_since = since;
+h_cph = cph;
