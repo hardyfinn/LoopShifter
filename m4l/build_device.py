@@ -391,13 +391,14 @@ def build():
 
     return patcher_dict(P.boxes, P.lines, [60.0, 80.0, 1300.0, 820.0],
                         extra={"devicewidth": 552.0,
-                               "dependency_cache": [{"name": DISPLAY_JS, "type": "TEXT", "implicit": 1},
-                                                    {"name": LIVE_JS, "type": "TEXT", "implicit": 1}],
+                               "dependency_cache": [{"name": n, "bootpath": ".", "patcherrelativepath": ".", "type": "TEXT",
+                                                     "implicit": 1} for n in (DISPLAY_JS, LIVE_JS)],
                                "project": {
                                    "version": 1, "creationdate": 3814000000, "modificationdate": 3814000000,
                                    "viewrect": [0.0, 0.0, 300.0, 500.0], "autoorganize": 1, "hideprojectwindow": 1,
                                    "showdependencies": 1, "autolocalize": 0,
-                                   "contents": {"patchers": {}},
+                                   "contents": {"patchers": {}, "code": {n: {"kind": "javascript", "local": 1}
+                                                                      for n in (DISPLAY_JS, LIVE_JS)}},
                                    "layout": {}, "searchpath": {}, "detailsvisible": 0,
                                    "amxdtype": 1633771873,          # 'aaaa': an audio effect
                                    "readonly": 0, "devpathtype": 0, "devpath": ".", "sortmode": 0,
