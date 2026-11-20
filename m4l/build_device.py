@@ -16,6 +16,18 @@ Patch overview:
 """
 import json, os, struct
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def sidecar(src):
+    """The scripts sit next to the .amxd (not inside it). Each build names them after
+    their content, because Live keeps a script it has loaded for the whole session."""
+    import hashlib
+    code = open(os.path.join(HERE, src)).read()
+    return src[:-3] + "_" + hashlib.blake2b(code.encode(), digest_size=4).hexdigest() + ".js", code
+
+
+DISPLAY_JS, DISPLAY_CODE = sidecar("loopshifter_display.js")
+LIVE_JS, LIVE_CODE = sidecar("loopshifter_live.js")
 OUT = os.path.join(HERE, "dist")
 
 
@@ -200,7 +212,7 @@ def build():
     P.connect(mbind, 0, gen, 0)
 
     # ---- display ----
-    disp = P.add({"maxclass": "jsui", "filename": "loopshifter_display.js", "numinlets": 1, "numoutlets": 1,
+    disp = P.add({"maxclass": "jsui", "filename": DISPLAY_JS, "numinlets": 1, "numoutlets": 1,
                   "outlettype": [""], "parameter_enable": 0, "border": 0,
                   "patching_rect": [680, 330, 262, 161], "presentation": 1, "presentation_rect": [4, 4, 262, 161]})
     mbufs = P.msg("bufs ---lspk ---lsst", 680, 280)
@@ -297,7 +309,7 @@ def build():
     seqs.append((clr, 1220, "clrseq"))
 
     # ---- talking to Live: stop the transport and switch the clip off when the buffer is full ----
-    live = P.obj("js loopshifter_live.js", 1220, 900, 1, 1, w=160)
+    live = P.obj("js " + LIVE_JS, 1220, 900, 1, 1, w=200)
     P.connect(auto, 0, P.obj("prepend auto", 340, 640), 0)
     P.connect(P.boxes[-1]["box"]["id"], 0, live, 0)
     crt = P.obj("route bang 1", 1220, 820, 1, 3)
@@ -379,17 +391,13 @@ def build():
 
     return patcher_dict(P.boxes, P.lines, [60.0, 80.0, 1300.0, 820.0],
                         extra={"devicewidth": 552.0,
-                               "dependency_cache": [{"name": "loopshifter_display.js", "bootpath": ".",
-                                                     "patcherrelativepath": ".", "type": "TEXT", "implicit": 1},
-                                                    {"name": "loopshifter_live.js", "bootpath": ".",
-                                                     "patcherrelativepath": ".", "type": "TEXT", "implicit": 1}],
+                               "dependency_cache": [{"name": DISPLAY_JS, "type": "TEXT", "implicit": 1},
+                                                    {"name": LIVE_JS, "type": "TEXT", "implicit": 1}],
                                "project": {
                                    "version": 1, "creationdate": 3814000000, "modificationdate": 3814000000,
                                    "viewrect": [0.0, 0.0, 300.0, 500.0], "autoorganize": 1, "hideprojectwindow": 1,
                                    "showdependencies": 1, "autolocalize": 0,
-                                   "contents": {"patchers": {},
-                                                "code": {"loopshifter_display.js": {"kind": "javascript", "local": 1},
-                                                         "loopshifter_live.js": {"kind": "javascript", "local": 1}}},
+                                   "contents": {"patchers": {}},
                                    "layout": {}, "searchpath": {}, "detailsvisible": 0,
                                    "amxdtype": 1633771873,          # 'aaaa': an audio effect
                                    "readonly": 0, "devpathtype": 0, "devpath": ".", "sortmode": 0,
@@ -413,9 +421,12 @@ def main():
         f.write(amxd_bytes(patcher))
     with open(os.path.join(OUT, "Loopshifter.maxpat"), "w") as f:
         json.dump({"patcher": patcher}, f, indent=1, ensure_ascii=False)
-    for js in ["loopshifter_display.js", "loopshifter_live.js"]:
-        with open(os.path.join(OUT, js), "w") as f:
-            f.write(open(os.path.join(HERE, js)).read())
+    for f in os.listdir(OUT):
+        if f.endswith(".js"):
+            os.remove(os.path.join(OUT, f))
+    for name, code in [(DISPLAY_JS, DISPLAY_CODE), (LIVE_JS, LIVE_CODE)]:
+        with open(os.path.join(OUT, name), "w") as f:
+            f.write(code)
     print("built m4l/dist/Loopshifter.amxd")
 
 

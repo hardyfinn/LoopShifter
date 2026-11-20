@@ -28,11 +28,20 @@ Because it plays loop minus shift, the shift has to be shorter than the loop.
 
 ## Install
 
-Put **Loopshifter.amxd**, **loopshifter_display.js** and **loopshifter_live.js** in the same folder (for example
-`User Library/Presets/Audio Effects/Max Audio Effect/`) and drag Loopshifter.amxd onto an
-audio track, a group or a return. `loopshifter_display.js` draws the display and `loopshifter_live.js` stops Live and
-switches the clip off. To get one
-file that carries everything, open the device in Max and press **Freeze Device**.
+Unzip **Loopshifter-M4L.zip** and keep the three files together in one folder (for
+example `User Library/Presets/Audio Effects/Max Audio Effect/`):
+
+- `Loopshifter.amxd`, the device
+- `loopshifter_display_xxxxxxxx.js`, which draws the display
+- `loopshifter_live_xxxxxxxx.js`, which stops Live and switches the clip off and on
+
+Drag Loopshifter.amxd onto the audio track that holds the clip. The letters at the end of
+the script names change with every version, so a new version never picks up an old
+script that Live is still holding. You can delete the old ones.
+
+If the display stays white, open the device in Max (the Edit button on its title bar),
+press **Freeze Device** (the snowflake at the bottom of the Max window) and save. The
+device then carries both scripts inside itself.
 
 ## Playing it
 
