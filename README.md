@@ -121,3 +121,7 @@ the **Shift** fraction across a breakdown.
   arming while Live is stopped, ARM/cancel, Clear, auto stop):
   `node m4l/test/gen_test.js`
 - `m4l/loopshifter_live.js`: stops Live and switches the clip off and on again ([js], Live API)
+
+## Licence
+
+MIT (see `LICENSE.txt`): you're free to use, change, port (VST/CLAP, other platforms, hardware) and share this code, as long as the copyright notice and licence text come along.
